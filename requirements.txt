@@ -1,0 +1,7 @@
+# MCP-CodeCarbon Requirements
+# 
+# Installer via pip install -r requirements.txt
+# ou pip install -e .
+
+mcp>=0.9.0
+codecarbon>=2.3.0
