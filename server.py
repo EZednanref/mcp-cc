@@ -1,26 +1,45 @@
 from __future__ import annotations
 
-import os
+import json
+from pathlib import Path
 from typing import Any
+import logging
 
 from mcp.server.fastmcp import FastMCP
-
-from analysis import (
-    aggregate_run_summaries,
-    select_lowest_consumption_experiment,
-)
+from analysis import aggregate_run_summaries, select_lowest_consumption_experiment
 from client import CodeCarbonApiClient
 
 mcp = FastMCP("codecarbon-api")
 
 
+def _get_access_token_from_file() -> str:
+    """
+    Read the CodeCarbon API access token from a local credentials file.
+    Raises an error if the file or token is missing, prompting the user to log in.
+    default location is .credentials.json in the current working directory, created by `codecarbon login`.
+    """
+    cred_path = Path(".credentials.json")
+    if not cred_path.exists():
+        raise FileNotFoundError(
+            f"No credentials file found at {cred_path}. Please run `codecarbon login` first."
+        )
+    with cred_path.open("r") as f:
+        data = json.load(f)
+    try:
+        return data["tokens"]["access_token"]
+    except KeyError:
+        raise ValueError(
+            "No access_token found in credentials file. Run `codecarbon login` again."
+        )
+
+
 def _build_client() -> CodeCarbonApiClient:
-    base_url = os.getenv("CODECARBON_API_URL", "https://api.codecarbon.io")
-    api_token = os.getenv("CODECARBON_API_TOKEN")
-    access_token = os.getenv("CODECARBON_ACCESS_TOKEN")
-    return CodeCarbonApiClient(
-        base_url=base_url, api_token=api_token, access_token=access_token
-    )
+    """
+    Crée un client CodeCarbonApiClient configuré avec l'API et le token d'accès.
+    """
+    base_url = "https://api.codecarbon.io"  # URL par défaut de l'API
+    access_token = _get_access_token_from_file()
+    return CodeCarbonApiClient(base_url=base_url, access_token=access_token)
 
 
 @mcp.tool()
@@ -159,11 +178,10 @@ def demo_prompt_scenarios() -> list[dict[str, str]]:
         },
     ]
 
-
-def main() -> None:
-    mcp.run()
+def main():
+    logging.info("Starting MCP server...")
+    mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
     main()
-
