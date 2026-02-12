@@ -5,11 +5,11 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
-from carbonserver.mcp.analysis import (
+from analysis import (
     aggregate_run_summaries,
     select_lowest_consumption_experiment,
 )
-from carbonserver.mcp.client import CodeCarbonApiClient
+from client import CodeCarbonApiClient
 
 mcp = FastMCP("codecarbon-api")
 
