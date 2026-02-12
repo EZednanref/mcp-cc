@@ -16,6 +16,7 @@ experiment records directly from the official API.
 
 - Python 3.12 or higher
 - pip (Python package manager)
+- uv
 
 ## Installation
 
@@ -34,41 +35,18 @@ pip install -r requirements.txt
 
 Before running the server, set your CodeCarbon API credentials:
 
-- `CODECARBON_API_URL`: API base URL (default: `https://api.codecarbon.io`)
-- `CODECARBON_API_TOKEN`: Project/API token (preferred when available)
-- `CODECARBON_ACCESS_TOKEN`: Bearer token fallback
-
-Use one of `CODECARBON_API_TOKEN` or `CODECARBON_ACCESS_TOKEN`.
-
-### Setting Environment Variables
-
-**On macOS/Linux:**
-```bash
-export CODECARBON_API_TOKEN="your_token_here"
-export CODECARBON_API_URL="https://api.codecarbon.io"
-```
-
-**On Windows (PowerShell):**
-```powershell
-$env:CODECARBON_API_TOKEN="your_token_here"
-$env:CODECARBON_API_URL="https://api.codecarbon.io"
-```
-
-**On Windows (Command Prompt):**
-```cmd
-set CODECARBON_API_TOKEN=your_token_here
-set CODECARBON_API_URL=https://api.codecarbon.io
-```
+- at the root of the project, execute codecarbon login
+then login to your codecarbon account, a credential file will be generated at the root.
 
 ## Run
 
 From repository root:
 
 ```bash
-python3 -m server
+uv run server.py
 ```
 
-The server will start and be ready to receive MCP client connections.
+The server will start and be ready to receive MCP client connections from AI Agent like Claude Desktop.
 
 ## MCP Tools
 
