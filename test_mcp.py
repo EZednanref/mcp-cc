@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """Test MCP server - handles stderr logging properly"""
 
 import subprocess
@@ -6,14 +7,24 @@ import json
 import sys
 import time
 
+# Fix encoding for Windows
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
+
 def test_mcp_server():
     """Test the MCP server by sending JSON-RPC requests via stdin"""
-    
+
     print("🚀 Starting MCP server...\n")
-    
+
+    # Get uv path from Python Scripts directory
+    import os
+    uv_path = os.path.join(sys.prefix, 'Scripts', 'uv.exe')
+    if not os.path.exists(uv_path):
+        uv_path = "uv"  # Fallback to PATH
+
     # Start the server process
     process = subprocess.Popen(
-        ["uv", "run", "server.py"],
+        [uv_path, "run", "server.py"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,

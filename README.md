@@ -48,12 +48,103 @@ uv run server.py
 
 The server will start and be ready to receive MCP client connections from AI Agent like Claude Desktop.
 
+## Connect to an AI Agent
+
+### What is MCP?
+
+MCP (Model Context Protocol) allows AI assistants to communicate with external tools and data sources. Your CodeCarbon server exposes its capabilities as MCP tools that AI agents can discover and use automatically.
+
+### Connecting to Claude Code (CLI)
+
+Claude Code is Anthropic's command-line interface that natively supports MCP servers.
+
+1. **Add your MCP server**:
+
+   Navigate to your project directory and run:
+   ```bash
+   cd C:\Users\YourName\Desktop\PFE\mcp-cc
+   claude mcp add codecarbon -- uv run server.py
+   ```
+
+2. **Verify the connection**:
+   ```bash
+   claude mcp list
+   ```
+
+   You should see:
+   ```
+   codecarbon: uv run server.py - ✓ Connected
+   ```
+
+3. **Restart Claude Code** to load the MCP server
+
+4. **Start using it**:
+
+   Once connected, you can interact naturally:
+   ```
+   "List my CodeCarbon organizations"
+   "What's the consumption of my bert-base experiment?"
+   "Which model consumes the least with 90% accuracy minimum?"
+   ```
+
+### Connecting to Claude Desktop (GUI)
+
+For Claude Desktop on Mac/Windows:
+
+1. Open the Claude Desktop configuration file:
+   - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
+
+2. Add the server configuration:
+   ```json
+   {
+     "mcpServers": {
+       "codecarbon": {
+         "command": "uv",
+         "args": ["run", "server.py"],
+         "cwd": "C:\\Users\\YourName\\Desktop\\PFE\\mcp-cc"
+       }
+     }
+   }
+   ```
+
+3. Restart Claude Desktop
+
+### How It Works
+
+```
+┌─────────────────┐
+│   AI Agent      │  (Claude Code / Claude Desktop)
+│  (Claude LLM)   │
+└────────┬────────┘
+         │ JSON-RPC over STDIO
+         ▼
+┌─────────────────┐
+│  MCP Server     │  (server.py)
+│  FastMCP        │  Exposes 8 tools
+└────────┬────────┘
+         │ HTTPS
+         ▼
+┌─────────────────┐
+│ CodeCarbon API  │  (api.codecarbon.io)
+└─────────────────┘
+```
+
+The AI agent:
+1. **Discovers** available tools on startup
+2. **Interprets** your natural language request
+3. **Calls** the appropriate MCP tool(s)
+4. **Formats** the response in a readable way
+
+All communication happens automatically - you just ask questions in natural language!
+
 ## MCP Tools
 
 - `check_auth`
 - `list_organizations`
 - `list_projects`
 - `list_experiments`
+- `create_experiment` - Create a new experiment in a project
 - `get_experiment_consumption`
 - `get_experiment_consumption_by_name`
 - `recommend_lowest_emission_experiment`

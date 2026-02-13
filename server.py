@@ -158,6 +158,52 @@ def recommend_lowest_emission_experiment(
 
 
 @mcp.tool()
+def create_experiment(
+    project_id: str,
+    name: str,
+    description: str | None = None,
+    timestamp: str | None = None,
+    country_name: str | None = None,
+    country_iso_code: str | None = None,
+    region: str | None = None,
+    on_cloud: bool = False,
+    cloud_provider: str | None = None,
+    cloud_region: str | None = None,
+) -> dict[str, Any]:
+    """
+    Create a new experiment in a CodeCarbon project.
+
+    Args:
+        project_id: ID of the project to create the experiment in
+        name: Name of the experiment (required)
+        description: Optional description of the experiment
+        timestamp: ISO 8601 timestamp (e.g., "2021-04-04T08:43:00+02:00")
+        country_name: Country where the experiment runs (e.g., "France")
+        country_iso_code: ISO country code (e.g., "FRA")
+        region: Region name (e.g., "france")
+        on_cloud: Whether the experiment runs on cloud infrastructure
+        cloud_provider: Cloud provider name (e.g., "aws", "gcp", "azure")
+        cloud_region: Cloud region identifier (e.g., "eu-west-1a")
+
+    Returns:
+        The created experiment data
+    """
+    client = _build_client()
+    return client.create_experiment(
+        project_id=project_id,
+        name=name,
+        description=description,
+        timestamp=timestamp,
+        country_name=country_name,
+        country_iso_code=country_iso_code,
+        region=region,
+        on_cloud=on_cloud,
+        cloud_provider=cloud_provider,
+        cloud_region=cloud_region,
+    )
+
+
+@mcp.tool()
 def demo_prompt_scenarios() -> list[dict[str, str]]:
     """Return practical prompt examples to demo this MCP with Benoit's experiment data."""
     return [
@@ -176,6 +222,12 @@ def demo_prompt_scenarios() -> list[dict[str, str]]:
             "prompt": "Liste les expériences disponibles du projet de Benoit.",
             "tool_chain": "list_experiments",
         },
+        {
+            "title": "Créer une expérience simple",
+            "prompt": "Crée une nouvelle expérience nommée 'llama-3-8B-fine-tuned' avec la description 'Fine-tuning pour classification de texte' dans mon projet",
+            "tool_chain": "create_experiment",
+        },
+
     ]
 
 def main():

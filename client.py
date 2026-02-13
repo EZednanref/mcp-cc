@@ -31,7 +31,7 @@ class CodeCarbonApiClient:
         return headers
 
     def _request(
-        self, method: str, path: str, params: dict[str, Any] | None = None
+        self, method: str, path: str, params: dict[str, Any] | None = None, json: dict[str, Any] | None = None
     ) -> Any:
         url = f"{self.base_url}{path}"
         response = requests.request(
@@ -39,6 +39,7 @@ class CodeCarbonApiClient:
             url=url,
             headers=self._headers(),
             params=params,
+            json=json,
             timeout=self.timeout_seconds,
         )
         if response.status_code >= 400:
@@ -111,4 +112,41 @@ class CodeCarbonApiClient:
             f"/runs/{run_id}/emissions",
             params={"page": page, "size": page_size},
         )
+
+    def create_experiment(
+        self,
+        project_id: str,
+        name: str,
+        description: str | None = None,
+        timestamp: str | None = None,
+        country_name: str | None = None,
+        country_iso_code: str | None = None,
+        region: str | None = None,
+        on_cloud: bool = False,
+        cloud_provider: str | None = None,
+        cloud_region: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a new experiment."""
+        payload = {
+            "project_id": project_id,
+            "name": name,
+        }
+        if description is not None:
+            payload["description"] = description
+        if timestamp is not None:
+            payload["timestamp"] = timestamp
+        if country_name is not None:
+            payload["country_name"] = country_name
+        if country_iso_code is not None:
+            payload["country_iso_code"] = country_iso_code
+        if region is not None:
+            payload["region"] = region
+        if on_cloud:
+            payload["on_cloud"] = on_cloud
+        if cloud_provider is not None:
+            payload["cloud_provider"] = cloud_provider
+        if cloud_region is not None:
+            payload["cloud_region"] = cloud_region
+
+        return self._request("POST", "/experiments", json=payload)
 
