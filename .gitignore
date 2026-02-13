@@ -30,3 +30,7 @@ dist/
 
 # Python cache
 *.pyc
+
+# Credentials
+.credentials.json
+credential.json
