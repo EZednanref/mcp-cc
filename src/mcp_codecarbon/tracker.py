@@ -1,12 +1,7 @@
-"""
-CodeCarbon wrapper module for energy and carbon tracking.
-
-This module provides a clean interface to CodeCarbon's tracking capabilities,
-designed to work without code instrumentation and provide metrics on demand.
-"""
+"""Wrapper CodeCarbon pour le suivi énergétique."""
 
 import logging
-from typing import Dict, Any, Optional
+import subprocess
 from datetime import datetime
 from codecarbon import EmissionsTracker
 
@@ -14,175 +9,92 @@ logger = logging.getLogger(__name__)
 
 
 class CodeCarbonTracker:
-    """
-    Wrapper class for CodeCarbon energy and carbon tracking.
-    
-    This class manages the lifecycle of energy tracking sessions and provides
-    methods to start, stop, and retrieve metrics without requiring code instrumentation.
-    """
+    """Gère le cycle de vie d'une session de tracking CodeCarbon."""
 
-    def __init__(self, project_name: str = "mcp-codecarbon-tracking"):
-        """
-        Initialize the CodeCarbon tracker.
-        
-        Args:
-            project_name: Name of the project for tracking purposes
-        """
+    def __init__(self, project_name: str = "mcp-codecarbon"):
         self.project_name = project_name
-        self._tracker: Optional[EmissionsTracker] = None
-        self._is_tracking = False
-        self._start_time: Optional[datetime] = None
-        logger.info(f"Initialized CodeCarbonTracker for project: {project_name}")
+        self._tracker: EmissionsTracker | None = None
+        self._start_time: datetime | None = None
 
-    def start_tracking(self, **kwargs: Any) -> Dict[str, Any]:
-        """
-        Start energy and carbon tracking.
-        
-        Args:
-            **kwargs: Additional parameters to pass to EmissionsTracker
-            
-        Returns:
-            Dict containing status and start time
-            
-        Raises:
-            RuntimeError: If tracking is already active
-        """
-        if self._is_tracking:
-            error_msg = "Tracking is already active"
-            logger.warning(error_msg)
-            raise RuntimeError(error_msg)
-
-        try:
-            # Create tracker with optional custom parameters
-            tracker_kwargs = {
-                "project_name": self.project_name,
-                "measure_power_secs": kwargs.get("measure_power_secs", 15),
-                "save_to_file": kwargs.get("save_to_file", False),
-                "logging_logger": logger,
-            }
-            
-            self._tracker = EmissionsTracker(**tracker_kwargs)
-            self._tracker.start()
-            self._is_tracking = True
-            self._start_time = datetime.now()
-            
-            result = {
-                "status": "started",
-                "start_time": self._start_time.isoformat(),
-                "project_name": self.project_name,
-            }
-            logger.info(f"Started tracking: {result}")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Failed to start tracking: {e}", exc_info=True)
-            raise RuntimeError(f"Failed to start tracking: {e}") from e
-
-    def stop_tracking(self) -> Dict[str, Any]:
-        """
-        Stop energy and carbon tracking and return final metrics.
-        
-        Returns:
-            Dict containing final metrics and tracking information
-            
-        Raises:
-            RuntimeError: If tracking is not active
-        """
-        if not self._is_tracking:
-            error_msg = "No active tracking session"
-            logger.warning(error_msg)
-            raise RuntimeError(error_msg)
-
-        try:
-            # Stop the tracker and get emissions
-            emissions = self._tracker.stop()
-            end_time = datetime.now()
-            
-            # Get the final data from the tracker
-            final_emissions = self._tracker.final_emissions_data
-            
-            result = {
-                "status": "stopped",
-                "start_time": self._start_time.isoformat() if self._start_time else None,
-                "end_time": end_time.isoformat(),
-                "duration_seconds": final_emissions.duration,
-                "emissions_kg": emissions,
-                "energy_consumed_kwh": final_emissions.energy_consumed,
-                "cpu_energy_kwh": final_emissions.cpu_energy,
-                "gpu_energy_kwh": final_emissions.gpu_energy,
-                "ram_energy_kwh": final_emissions.ram_energy,
-                "country_name": final_emissions.country_name,
-                "country_iso_code": final_emissions.country_iso_code,
-            }
-            
-            # Reset state
-            self._is_tracking = False
-            self._tracker = None
-            self._start_time = None
-            
-            logger.info(f"Stopped tracking: emissions={emissions} kg CO2")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Failed to stop tracking: {e}", exc_info=True)
-            raise RuntimeError(f"Failed to stop tracking: {e}") from e
-
-    def get_current_metrics(self) -> Dict[str, Any]:
-        """
-        Get current metrics without stopping the tracking session.
-        
-        Returns:
-            Dict containing current metrics
-            
-        Raises:
-            RuntimeError: If tracking is not active
-        """
-        if not self._is_tracking:
-            error_msg = "No active tracking session"
-            logger.warning(error_msg)
-            raise RuntimeError(error_msg)
-
-        try:
-            # Get current tracker data
-            current_time = datetime.now()
-            duration = (current_time - self._start_time).total_seconds() if self._start_time else 0
-            
-            # Note: CodeCarbon doesn't provide a direct way to get intermediate metrics
-            # without stopping, so we provide what we can
-            result = {
-                "status": "tracking",
-                "start_time": self._start_time.isoformat() if self._start_time else None,
-                "current_time": current_time.isoformat(),
-                "duration_seconds": duration,
-                "project_name": self.project_name,
-                "note": "Detailed metrics available after stopping tracking",
-            }
-            
-            logger.debug(f"Retrieved current metrics: {result}")
-            return result
-            
-        except Exception as e:
-            logger.error(f"Failed to get current metrics: {e}", exc_info=True)
-            raise RuntimeError(f"Failed to get current metrics: {e}") from e
-
+    @property
     def is_tracking(self) -> bool:
-        """
-        Check if tracking is currently active.
-        
-        Returns:
-            True if tracking is active, False otherwise
-        """
-        return self._is_tracking
+        return self._tracker is not None
 
-    def get_status(self) -> Dict[str, Any]:
-        """
-        Get the current status of the tracker.
-        
-        Returns:
-            Dict containing tracker status information
-        """
+    def start(self, measure_power_secs: int = 15, save_to_file: bool = False) -> dict:
+        """Démarre le tracking. Si déjà actif, relance automatiquement."""
+        if self.is_tracking:
+            self.stop()  # auto-restart propre
+
+        self._tracker = EmissionsTracker(
+            project_name=self.project_name,
+            measure_power_secs=measure_power_secs,
+            save_to_file=save_to_file,
+            logging_logger=logger,
+        )
+        self._tracker.start()
+        self._start_time = datetime.now()
+
         return {
-            "is_tracking": self._is_tracking,
+            "project_name": self.project_name,
+            "start_time": self._start_time.isoformat(),
+        }
+
+    def stop(self) -> dict:
+        """Arrête le tracking et retourne les métriques finales."""
+        if not self.is_tracking:
+            raise RuntimeError("Aucune session de tracking active")
+
+        emissions = self._tracker.stop()
+        data = self._tracker.final_emissions_data
+        end_time = datetime.now()
+
+        result = {
+            "start_time": self._start_time.isoformat() if self._start_time else None,
+            "end_time": end_time.isoformat(),
+            "duration_seconds": data.duration,
+            "emissions_kg": emissions,
+            "energy_consumed_kwh": data.energy_consumed,
+            "cpu_energy_kwh": data.cpu_energy,
+            "gpu_energy_kwh": data.gpu_energy,
+            "ram_energy_kwh": data.ram_energy,
+            "country_name": data.country_name,
+            "country_iso_code": data.country_iso_code,
+        }
+
+        # Reset
+        self._tracker = None
+        self._start_time = None
+        return result
+
+    def status(self) -> dict:
+        """Retourne l'état courant du tracker."""
+        return {
+            "is_tracking": self.is_tracking,
             "project_name": self.project_name,
             "start_time": self._start_time.isoformat() if self._start_time else None,
         }
+
+    def run_and_measure(self, command: str, measure_power_secs: int = 15) -> dict:
+        """Exécute une commande shell et mesure son empreinte énergétique."""
+        self.start(measure_power_secs=measure_power_secs)
+        try:
+            proc = subprocess.run(
+                command, shell=True, capture_output=True, text=True, timeout=300,
+            )
+            metrics = self.stop()
+            # Ajouter la sortie de la commande (tronquée à 2000 chars)
+            metrics["command"] = command
+            metrics["returncode"] = proc.returncode
+            metrics["stdout"] = (proc.stdout or "")[-2000:]
+            metrics["stderr"] = (proc.stderr or "")[-2000:]
+            return metrics
+        except Exception as e:
+            # Nettoyer en cas d'erreur
+            if self.is_tracking:
+                try:
+                    self._tracker.stop()
+                except Exception:
+                    pass
+                self._tracker = None
+                self._start_time = None
+            raise RuntimeError(f"Erreur lors de l'exécution: {e}") from e

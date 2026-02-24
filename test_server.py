@@ -1,13 +1,23 @@
-# test_server.py
-# juste un petit test direct des fonctions du server.py
-import asyncio
-from server import start_tracking, stop_tracking, get_status
+"""Test direct du tracker CodeCarbon (sans passer par MCP)."""
 
-async def main():
-    print(await get_status())
-    print(await start_tracking(measure_power_secs=1))
-    print(await get_status())
-    print(await stop_tracking())
-    print(await get_status())
+import time
+from mcp_codecarbon.tracker import CodeCarbonTracker
 
-asyncio.run(main())
+tracker = CodeCarbonTracker()
+
+# 1. Status initial
+print("=== Status initial ===")
+print(tracker.status())
+
+# 2. Start/stop manuel
+print("\n=== Start/Stop manuel ===")
+tracker.start(measure_power_secs=1)
+print(tracker.status())
+time.sleep(2)
+print(tracker.stop())
+
+# 3. run_and_measure — mesure l'exécution d'une commande
+print("\n=== run_and_measure ===")
+result = tracker.run_and_measure("python3 -c 'sum(range(10_000_000))'", measure_power_secs=1)
+for k, v in result.items():
+    print(f"  {k}: {v}")
